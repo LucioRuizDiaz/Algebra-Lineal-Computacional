@@ -72,22 +72,11 @@ def traza(A):
 #Ejercicio 6
 def traspuesta(A):
     filas = len(A)
-    columnas = len(A[filas - 1])
+    columnas = len(A[0]) 
     U = np.zeros((columnas, filas))
-    if(esCuadrada(A)):
-        for fila in range(filas):
-            for columna in range(columnas):
-                if(fila == columna):
-                    U[fila][columna] = A[fila][columna]
-                else:
-                    U[fila][columna] = A[columna][fila]
-    else:
-        for columna in range(columnas):
-            for fila in range(filas):
-                if(fila == columna):
-                    U[fila][columna] = A[fila][columna]
-                else:
-                    U[columna][fila] = A[fila][columna]
+    for f in range(filas):
+        for c in range(columnas):
+            U[c][f] = A[f][c]
     return U
 
 
