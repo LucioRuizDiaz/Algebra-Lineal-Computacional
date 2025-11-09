@@ -43,9 +43,19 @@ def QR_con_HH(A, tol=1e-12):
         if(norma_u > tol):
             u = u / norma_u
             H = np.eye(h) - 2 * np.outer(u, u) #preguntar si se puede usar
-            H_sombrero = H_sombrero(filas, k, H)
+            H_sombrero = construir_H_sombrero(filas, k, H)
             R = multiplicacion_matricial(H_sombrero, R)
             Q = multiplicacion_matricial(Q, H_sombrero) 
+    return Q, R
+    
+#   --- Calcular QR ---
+def calculaQR(A, metodo, tol = 1e-12):
+    if(metodo == "RH"):
+        Q, R = QR_con_HH(A, tol)
+    elif(metodo == "GS"):
+        Q, R = QR_con_GS(A, tol)
+    else:
+        Q, R = None, None
     return Q, R
     
 
@@ -105,7 +115,7 @@ def vector_canonico(l, i):
   e[i] = 1.0
   return e
 
-def H_sombrero(m, k, H):
+def construir_H_sombrero(m, k, H):
     H_sombrero = np.eye(m, dtype=H.dtype) #Identidad de filasxfilas
     index = k
     H_sombrero[index: , index:] = H
@@ -151,3 +161,13 @@ check_QR(Q3h,R3h,A3)
 
 Q4h,R4h = QR_con_HH(A4)
 check_QR(Q4h,R4h,A4)
+
+# --- TESTS PARA calculaQR ---
+Q2c,R2c = calculaQR(A2,metodo='RH')
+check_QR(Q2c,R2c,A2)
+
+Q3c,R3c = calculaQR(A3,metodo='GS')
+check_QR(Q3c,R3c,A3)
+
+Q4c,R4c = calculaQR(A4,metodo='RH')
+check_QR(Q4c,R4c,A4)
