@@ -6,7 +6,7 @@ def QR_con_GS(A,tol=1e-12,retorna_nops=False):
     filas, columnas = A.shape
     Q = np.zeros((filas, filas))
     R = np.zeros((filas, filas))
-    if(esCuadarda(A)):
+    if(esCuadrada(A)):
         r = 0 
         for j in range(filas):
             qj = A[:, j].copy()
@@ -61,9 +61,8 @@ def calculaQR(A, metodo, tol = 1e-12):
 
 #   --- funciones auxiliares ---
 
-def esCuadarda(A):
-    filas = len(A)
-    columnas = len(A[0])
+def esCuadrada(A):
+    filas, columnas = A.shape()
     return filas == columnas
 
 def norma(x, p):
