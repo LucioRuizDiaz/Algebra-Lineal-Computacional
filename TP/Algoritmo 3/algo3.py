@@ -4,8 +4,6 @@ import alc as alc
 # ------------------------
 # Descomposicion QR
 # ------------------------
-
-
 def xTraspuestaQR(X, metodo):
     Q, R = alc.calculaQR(alc.traspuesta(X), metodo, tol=1e-12)
     return  Q, R
@@ -35,3 +33,4 @@ def pinvGramSchmidt(Q, R, Y):
     V = alc.traspuesta(Vt) 
     W = alc.multiplicacion_matricial(Y, V)
     return W
+
