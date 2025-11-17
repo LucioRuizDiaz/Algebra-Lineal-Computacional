@@ -7,84 +7,46 @@ import alc as alc
 # ITEM 1 - Lectura de Datos
 # --------------------------------------
 
-def cargarDataset(ruta_base_dataset):
-    """
-    Carga los embeddings pre-calculados para los conjuntos
-    de entrenamiento y validacion, y genera sus respectivas etiquetas.
-    
-    Parámetros:
+path = os.path.join("template-alumnos", "dataset", "cats_and_dogs")
 
-    ruta_base_dataset : str
-       La ruta raíz (principal) donde se encuentran las carpetas 'train' y 'val'.
+def cargarDataSet(path):
+    #   --- Path segun train o val ---
+    pathGatosT  = path + "\\train\\cats\\efficientnet_b3_embeddings.npy"
+    pathPerrosT = path + "\\train\\dogs\\efficientnet_b3_embeddings.npy"
+    pathGatosV  = path + "\\val\\cats\\efficientnet_b3_embeddings.npy"
+    pathPerrosV = path + "\\val\\dogs\\efficientnet_b3_embeddings.npy"
 
-    Retorna:
-    tuple
-       Una tupla de 4 arrays de NumPy en el siguiente orden: 
-       (X_entrenamiento, Y_entrenamiento, X_validacion, Y_validacion)
-    """
-    
-    NOMBRE_ARCHIVO_EMBEDDINGS = 'efficientnet_b3_embeddings.npy'
+    # --- Matrices cargadas
+    gatosT  = np.load(pathGatosT)
+    perrosT = np.load(pathPerrosT)
+    gatosV  = np.load(pathGatosV)
+    perrosV = np.load(pathPerrosV)
 
-    # Construir las rutas 
-    ruta_entrenamiento = os.path.join(ruta_base_dataset, 'train')
-    ruta_validacion = os.path.join(ruta_base_dataset, 'val')
-    
-    ruta_train_gatos = os.path.join(ruta_entrenamiento, 'cats', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_train_perros = os.path.join(ruta_entrenamiento, 'dogs', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_val_gatos = os.path.join(ruta_validacion, 'cats', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_val_perros = os.path.join(ruta_validacion, 'dogs', NOMBRE_ARCHIVO_EMBEDDINGS)
+    # --- como el TP pide que las matrices tengan 2 elementos por columna que indiquen
+    # --- si se trata de un gato o un perro, creamos matrices de la forma np.zeros((2, cantColumnas))
+    columnasGatosT = gatosT.shape[1]
+    columnasPerrosT = perrosT.shape[1]
+    columnasGatosV = gatosV.shape[1]
+    columnasPerrosV = perrosV.shape[1]
 
-    # Cargar los features del conjunto de entrenamiento
-    X_train_gatos = np.load(ruta_train_gatos) 
-    X_train_perros = np.load(ruta_train_perros)
-    
-    # Unir los datos de gatos y perros en una sola matriz.
-    X_entrenamiento = np.hstack((X_train_gatos, X_train_perros))
+    YGatosT = np.zeros((2, columnasGatosT))
+    YGatosT[0, :] = 1 
+    YPerrosT = np.zeros((2, columnasPerrosT))
+    YPerrosT[1, :] = 1
+    YGatosV = np.zeros((2, columnasGatosV))
+    YGatosV[0, :] = 1
+    YPerrosV = np.zeros((2, columnasPerrosV))
+    YPerrosV[1, :] = 1
 
-    # Cargar los features del conjunto de validacion
-    X_val_gatos = np.load(ruta_val_gatos)
-    X_val_perros = np.load(ruta_val_perros)
-    
-    # Unir los datos de gatos y perros en una sola matriz.
-    X_validacion = np.hstack((X_val_gatos, X_val_perros))
+    Xt = np.concatenate((gatosT, perrosT), 1)
+    Yt = np.concatenate((YGatosT, YPerrosT), 1)
+    Xv = np.concatenate((gatosV, perrosV), 1)
+    Yv = np.concatenate((YGatosV, YPerrosV), 1)
 
-    # Definir etiquetas 
-    etiqueta_gato = np.array([[1], [0]]) # GATO
-    etiqueta_perro = np.array([[0], [1]]) # PERRO
+    return Xt, Yt, Xv, Yv
 
-    # ENTRENAMIENTO
-    
-    # Contar cuantas columnas hay para cada clase en entrenamiento
-    num_gatos_entrenamiento = X_train_gatos.shape[1]
-    num_perros_entrenamiento = X_train_perros.shape[1]
-    
-    # Usar np.tile para repetir el vector de etiqueta para cada muestra de esa clase
-    Y_train_gatos = np.tile(etiqueta_gato, num_gatos_entrenamiento)
-    Y_train_perros = np.tile(etiqueta_perro, num_perros_entrenamiento)
 
-    # Apilar horizontalmente las etiquetas en el mismo orden 
-    Y_entrenamiento = np.hstack((Y_train_gatos, Y_train_perros))
-
-    # VALIDACION
-
-    # Contar cuantas columnas hay para cada clase en validacion
-    num_gatos_validacion = X_val_gatos.shape[1]
-    num_perros_validacion = X_val_perros.shape[1]
-    
-    # Repetir las etiquetas para el conjunto de validacion
-    Y_val_gatos = np.tile(etiqueta_gato, num_gatos_validacion)
-    Y_val_perros = np.tile(etiqueta_perro, num_perros_validacion)
-
-    # Apilar horizontalmente las etiquetas de validación
-    Y_validacion = np.hstack((Y_val_gatos, Y_val_perros))
-
-    # Imprimir las dimensiones finales de las matrices
-    print(f"Dimensiones X Entrenamiento (Xt): {X_entrenamiento.shape}")
-    print(f"Dimensiones Y Entrenamiento (Yt): {Y_entrenamiento.shape}")
-    print(f"Dimensiones X Validación (Xv): {X_validacion.shape}")
-    print(f"Dimensiones Y Validación (Yv): {Y_validacion.shape}")
-  
-    return X_entrenamiento, Y_entrenamiento, X_validacion, Y_validacion 
+Xt, Yt, Xv, Yv = cargarDataSet(path)
 
 # --------------------------------------
 # ITEM 2 - Ecuaciones Normales
@@ -183,7 +145,7 @@ def pinvEcuacionesNormales(X, Y):
     # Resuelve A @ U = B donde A = X.T @ X (p, p)
     # La solución final es W = Y @ U
     if n > p :
-        Xt = X.T 
+        Xt = alc.traspuesta(X)
 
         A = alc.multiplicacionMatricial(Xt, X)
         # B es el lado derecho del sistema 
@@ -203,7 +165,7 @@ def pinvEcuacionesNormales(X, Y):
 
         # Resolver L.T @ U = Z para U (Sustitución hacia atrás)
         U = np.zeros_like(Z)
-        L_transpuesta = L.T
+        L_transpuesta = alc.traspuesta(L)
         # Iteramos sobre cada columna de Z que tiene 'n' columnas
         for i in range(Z.shape[1]): 
             U[:, i] = alc.res_tri(L_transpuesta, Z[:, i], inferior=False)
@@ -219,7 +181,7 @@ def pinvEcuacionesNormales(X, Y):
     # Y luego W = Y @ V
     elif n < p:
 
-        Xt = X.T # (p, n)
+        Xt = alc.traspuesta(X) # (p, n)
 
         # A es la matriz pequeña y definida positiva (n, n)
         A = alc.multiplicacionMatricial(X, Xt) 
@@ -230,7 +192,7 @@ def pinvEcuacionesNormales(X, Y):
         L = cholesky(A) 
             
         # El algoritmo resuelve (L @ L.T) @ V.T = X
-        Bt = B.T 
+        Bt = alc.traspuesta(B)
         
         # Resolver L @ L.T @ V.T = X en dos pasos:
         
@@ -245,7 +207,7 @@ def pinvEcuacionesNormales(X, Y):
             Vt[:, i] = alc.res_tri(L.T, Z[:, i], inferior=False)
         
         # Obtener V (la pseudoinversa de X)
-        V = Vt.T 
+        V = alc.traspuesta(Vt)
         
         # Calcular W = Y @ V
         # W (m, n) = Y (m, p) @ V (p, n)
@@ -267,78 +229,6 @@ def pinvEcuacionesNormales(X, Y):
 # ITEM 3 - Descomposición en Valores Singulares
 # --------------------------------------
 
-def svd(A, tol=1e-15, K=1000):
-    """
-    Calcula la Descomposición en Valores Singulares (SVD) de una matriz A.
-    
-    Implementa el cálculo A = U @ S @ V.T (versión reducida)
-    utilizando el método de los autovalores.
-    
-    Parámetros:
-    ----------
-    A : np.ndarray
-        La matriz de datos (n, p) a descomponer.
-    
-    tol : float, opcional
-        Tolerancia para la convergencia en la diagonalización (diagRH).
-        
-    K : int, opcional
-        Número máximo de iteraciones para la diagonalización (diagRH).
-
-    Retorna:
-    -------
-    tuple
-        Una tupla (U, S, V) donde:
-        - U (np.ndarray): Matriz (n, p) de vectores singulares izquierdos.
-        - S (np.ndarray): Vector (p,) de valores singulares.
-        - V (np.ndarray): Matriz (p, p) de vectores singulares derechos.
-    """
-    n, p = A.shape
-    
-    # Calcular A.T @ A 
-    At = A.T
-    AtA = alc.multiplicacionMatricial(At, A) 
-    
-    # Diagonalizar A.T @ A para obtener V y Autovalores
-    # Usamos diagRH para resolver AtA = V @ D @ V.T
-
-    # V (p, p) contiene los autovectores (vectores singulares derechos)
-    # D (p, p) es una matriz diagonal de autovalores
-    V, D , _ = alc.diagRH(AtA, tol, K) 
-    
-    # Obtener Valores Singulares (S) y ordenar
-    autovalores = np.diag(D)
-    
-    # Ordenar autovalores y autovectores de mayor a menor
-    idx_ordenados = np.argsort(autovalores)[::-1]
-    autovalores = autovalores[idx_ordenados]
-    V = V[:, idx_ordenados] # Reordenar las columnas de V
-    
-    # Los valores singulares son la raíz cuadrada de los autovalores
-    S_vector = np.sqrt(np.abs(autovalores)) 
-    
-    # Calcular U usando la relación A = U @ S @ V.T 
-
-    # Crear un vector de ceros para S_inv
-    S_inv = np.zeros_like(S_vector)
-    
-    # Definir un umbral para considerar un valor como "no cero"
-    umbral = 1e-15 # Puedes usar 'tol'
-    
-    # Encontrar los índices donde S_vector es mayor que el umbral
-    idx_no_cero = S_vector > umbral
-    
-    # Solo en esos índices, calcular la inversa
-    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
-    
-    # Convertir el vector S_inv a una matriz diagonal
-    S_inv_diag = np.diag(S_inv)
-    
-    # U = (A @ V) @ S_inv_diag
-    AV = alc.multiplicacionMatricial(A, V) 
-    U = alc.multiplicacionMatricial(AV, S_inv_diag) 
-
-    return U, S_vector, V
 
 def pinvSVD(U, S_vector, V, Yt):
     """
@@ -387,7 +277,7 @@ def pinvSVD(U, S_vector, V, Yt):
     # Calcular W = Yt @ V @ S_plus @ U.T 
     
     # Tmp1 = S_plus @ U.T
-    Ut = U.T 
+    Ut = alc.traspuesta(U) 
     Tmp1 = alc.multiplicacionMatricial(S_plus, Ut) 
     
     # Tmp2 = V @ Tmp1 
@@ -419,7 +309,7 @@ def pinvHouseHolder(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
 
 def pinvGramSchmidt(Q, R, Y):
@@ -429,9 +319,8 @@ def pinvGramSchmidt(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
-
 
 # --------------------------------------------
 # ITEM 5 - Pseudo-Inversa de Moore-Penrose 
@@ -471,7 +360,7 @@ Si pred[1] > pred[0] -> perro
 """
 def predecir_clases(W, Xv):
     Y_pred = alc.multiplicacionMatricial(W, Xv)
-    clases = np.zeros(Y_pred.shape[1], dtype=int)
+    clases = np.zeros(Y_pred.shape[1], dtype=float)
 
     for i in range(Y_pred.shape[1]):
         if Y_pred[0, i] > Y_pred[1, i]:
@@ -481,7 +370,7 @@ def predecir_clases(W, Xv):
     return clases
 
 def clases_reales(Y):
-    clases = np.zeros(Y.shape[1], dtype=int)
+    clases = np.zeros(Y.shape[1], dtype=float)
 
     for i in range(Y.shape[1]):
         if Y[0, i] == 1:
@@ -491,7 +380,7 @@ def clases_reales(Y):
     return clases
 
 def matriz_confusion(clases_reales, clases_pred):
-    M = np.zeros((2,2), dtype=int)
+    M = np.zeros((2,2), dtype=float)
     for i in range(clases_reales.shape[0]):
         M[clases_reales[i], clases_pred[i]] += 1
     return M
@@ -566,7 +455,7 @@ def calcular_metricas(M):
 
 # AHORA ARMO LA TABLA COMPARATIVA
 
-tabla = pd.DataFrame({
+tabla = pd.DataFrame(alc.traspuesta(({
     metodo: {
         "Accuracy": met["Accuracy"],
         "Precisión Gato": met["Precisión Gato"],
@@ -577,7 +466,7 @@ tabla = pd.DataFrame({
         "F1 Perro": met["F1 Perro"]
     }
     for metodo, met in resultados.items()
-}).T
+})))
 
 tabla
 
