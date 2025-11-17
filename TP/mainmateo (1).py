@@ -7,165 +7,56 @@ import alc as alc
 # ITEM 1 - Lectura de Datos
 # --------------------------------------
 
-def cargarDataset(ruta_base_dataset):
-    """
-    Carga los embeddings pre-calculados para los conjuntos
-    de entrenamiento y validacion, y genera sus respectivas etiquetas.
-    
-    Parámetros:
+path = os.path.join("template-alumnos", "dataset", "cats_and_dogs")
 
-    ruta_base_dataset : str
-       La ruta raíz (principal) donde se encuentran las carpetas 'train' y 'val'.
+def cargarDataSet(path):
+    #   --- Path segun train o val ---
+    pathGatosT  = path + "\\train\\cats\\efficientnet_b3_embeddings.npy"
+    pathPerrosT = path + "\\train\\dogs\\efficientnet_b3_embeddings.npy"
+    pathGatosV  = path + "\\val\\cats\\efficientnet_b3_embeddings.npy"
+    pathPerrosV = path + "\\val\\dogs\\efficientnet_b3_embeddings.npy"
 
-    Retorna:
-    tuple
-       Una tupla de 4 arrays de NumPy en el siguiente orden: 
-       (X_entrenamiento, Y_entrenamiento, X_validacion, Y_validacion)
-    """
-    
-    NOMBRE_ARCHIVO_EMBEDDINGS = 'efficientnet_b3_embeddings.npy'
+    # --- Matrices cargadas
+    gatosT  = np.load(pathGatosT)
+    perrosT = np.load(pathPerrosT)
+    gatosV  = np.load(pathGatosV)
+    perrosV = np.load(pathPerrosV)
 
-    # Construir las rutas 
-    ruta_entrenamiento = os.path.join(ruta_base_dataset, 'train')
-    ruta_validacion = os.path.join(ruta_base_dataset, 'val')
-    
-    ruta_train_gatos = os.path.join(ruta_entrenamiento, 'cats', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_train_perros = os.path.join(ruta_entrenamiento, 'dogs', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_val_gatos = os.path.join(ruta_validacion, 'cats', NOMBRE_ARCHIVO_EMBEDDINGS)
-    ruta_val_perros = os.path.join(ruta_validacion, 'dogs', NOMBRE_ARCHIVO_EMBEDDINGS)
+    # --- como el TP pide que las matrices tengan 2 elementos por columna que indiquen
+    # --- si se trata de un gato o un perro, creamos matrices de la forma np.zeros((2, cantColumnas))
+    columnasGatosT = gatosT.shape[1]
+    columnasPerrosT = perrosT.shape[1]
+    columnasGatosV = gatosV.shape[1]
+    columnasPerrosV = perrosV.shape[1]
 
-    # Cargar los features del conjunto de entrenamiento
-    X_train_gatos = np.load(ruta_train_gatos) 
-    X_train_perros = np.load(ruta_train_perros)
-    
-    # Unir los datos de gatos y perros en una sola matriz.
-    X_entrenamiento = np.hstack((X_train_gatos, X_train_perros))
+    YGatosT = np.zeros((2, columnasGatosT))
+    YGatosT[0, :] = 1 
+    YPerrosT = np.zeros((2, columnasPerrosT))
+    YPerrosT[1, :] = 1
+    YGatosV = np.zeros((2, columnasGatosV))
+    YGatosV[0, :] = 1
+    YPerrosV = np.zeros((2, columnasPerrosV))
+    YPerrosV[1, :] = 1
 
-    # Cargar los features del conjunto de validacion
-    X_val_gatos = np.load(ruta_val_gatos)
-    X_val_perros = np.load(ruta_val_perros)
-    
-    # Unir los datos de gatos y perros en una sola matriz.
-    X_validacion = np.hstack((X_val_gatos, X_val_perros))
+    Xt = np.concatenate((gatosT, perrosT), 1)
+    Yt = np.concatenate((YGatosT, YPerrosT), 1)
+    Xv = np.concatenate((gatosV, perrosV), 1)
+    Yv = np.concatenate((YGatosV, YPerrosV), 1)
 
-    # Definir etiquetas 
-    etiqueta_gato = np.array([[1], [0]]) # GATO
-    etiqueta_perro = np.array([[0], [1]]) # PERRO
+    return Xt, Yt, Xv, Yv
 
-    # ENTRENAMIENTO
-    
-    # Contar cuantas columnas hay para cada clase en entrenamiento
-    num_gatos_entrenamiento = X_train_gatos.shape[1]
-    num_perros_entrenamiento = X_train_perros.shape[1]
-    
-    # Usar np.tile para repetir el vector de etiqueta para cada muestra de esa clase
-    Y_train_gatos = np.tile(etiqueta_gato, num_gatos_entrenamiento)
-    Y_train_perros = np.tile(etiqueta_perro, num_perros_entrenamiento)
 
-    # Apilar horizontalmente las etiquetas en el mismo orden 
-    Y_entrenamiento = np.hstack((Y_train_gatos, Y_train_perros))
+Xt, Yt, Xv, Yv = cargarDataSet(path)
 
-    # VALIDACION
-
-    # Contar cuantas columnas hay para cada clase en validacion
-    num_gatos_validacion = X_val_gatos.shape[1]
-    num_perros_validacion = X_val_perros.shape[1]
-    
-    # Repetir las etiquetas para el conjunto de validacion
-    Y_val_gatos = np.tile(etiqueta_gato, num_gatos_validacion)
-    Y_val_perros = np.tile(etiqueta_perro, num_perros_validacion)
-
-    # Apilar horizontalmente las etiquetas de validación
-    Y_validacion = np.hstack((Y_val_gatos, Y_val_perros))
-
-    # Imprimir las dimensiones finales de las matrices
-    print(f"Dimensiones X Entrenamiento (Xt): {X_entrenamiento.shape}")
-    print(f"Dimensiones Y Entrenamiento (Yt): {Y_entrenamiento.shape}")
-    print(f"Dimensiones X Validación (Xv): {X_validacion.shape}")
-    print(f"Dimensiones Y Validación (Yv): {Y_validacion.shape}")
-  
-    return X_entrenamiento, Y_entrenamiento, X_validacion, Y_validacion 
 
 # --------------------------------------
 # ITEM 2 - Ecuaciones Normales
 # --------------------------------------
 
-def cholesky(matriz_A):
-    """
-    Calcula la descomposición de Cholesky (A = L * L.T) de una matriz 
-    simétrica y definida positiva.
-
-    Parámetros:
-    matriz_A : np.ndarray
-        Una matriz cuadrada, simétrica y definida positiva.
-
-    Retorna:
-    np.ndarray
-        La matriz triangular inferior L tal que L @ L.T = matriz_A.
-    """
-    
-    # Obtener la dimensión de la matriz 
-    n = matriz_A.shape[0]
-    
-    # Crear una matriz de ceros para almacenar L
-    matriz_L = np.zeros((n, n), dtype=float)
-
-    # Iterar sobre las filas 
-    for i in range(n):
-        # Iterar sobre las columnas 
-        for j in range(i + 1):
-            
-            # Inicializar la suma de productos 
-            suma_parcial = 0
-            for k in range(j):
-                suma_parcial += matriz_L[i, k] * matriz_L[j, k]
-
-            # Elementos de la diagonal
-            if i == j:
-                valor_diagonal = matriz_A[i, i] - suma_parcial
-                
-                # Manejar posibles matrices no def-positivas
-                if valor_diagonal < 0:
-                    raise ValueError("La matriz no es definida positiva. No se puede calcular Cholesky.")
-                
-                matriz_L[i, i] = np.sqrt(valor_diagonal)
-
-            # Elementos fuera de la diagonal
-            else:
-                if matriz_L[j, j] == 0:
-                    raise ValueError("División por cero, L[j, j] es cero.")
-                    
-                matriz_L[i, j] = (matriz_A[i, j] - suma_parcial) / matriz_L[j, j]
-                
-    return matriz_L
-
 def pinvEcuacionesNormales(X, Y):
-    """
-    Resuelve el sistema de ecuaciones lineales Y = W @ X para la matriz W,
-    utilizando la pseudoinversa calculada por Ecuaciones Normales.
-    
-    Elige automáticamente el algoritmo basado en las dimensiones de la matriz de datos X (n, p).
-
-    Parámetros:
-    X : np.ndarray
-        Matriz de datos (features), con dimensiones (n, p).
-    
-    Y : np.ndarray
-        Matriz de etiquetas (objetivos), con dimensiones (m, p).
-
-    Retorna:
-
-    W : np.ndarray
-        La matriz de pesos W (m, n) (ej: (2, 1536)) que mejor 
-        resuelve el sistema.
-    """
-    
-    # Verificación de Dimensiones 
-    
     # m = número de clases 
     # p_Y = número de muestras en Y
     m, p_Y = Y.shape
-    
     # n = número de características
     # p_X = número de muestras en X
     n, p_X = X.shape
@@ -190,7 +81,7 @@ def pinvEcuacionesNormales(X, Y):
         B = Xt
 
         # Calcular la descomposición L @ L.T = A
-        L = cholesky(A)
+        L = alc.calculaCholesky(A)
 
         # Resolver L @ L.T @ U = B en dos pasos:
         
@@ -227,7 +118,7 @@ def pinvEcuacionesNormales(X, Y):
         B = Xt 
         
         # Calcular la descomposición L @ L.T = A
-        L = cholesky(A) 
+        L = alc.calculaCholesky(A) 
             
         # El algoritmo resuelve (L @ L.T) @ V.T = X
         Bt = B.T 
@@ -471,7 +362,7 @@ Si pred[1] > pred[0] -> perro
 """
 def predecir_clases(W, Xv):
     Y_pred = alc.multiplicacionMatricial(W, Xv)
-    clases = np.zeros(Y_pred.shape[1], dtype=int)
+    clases = np.zeros(Y_pred.shape[1], dtype=float)
 
     for i in range(Y_pred.shape[1]):
         if Y_pred[0, i] > Y_pred[1, i]:
@@ -481,7 +372,7 @@ def predecir_clases(W, Xv):
     return clases
 
 def clases_reales(Y):
-    clases = np.zeros(Y.shape[1], dtype=int)
+    clases = np.zeros(Y.shape[1], dtype=float)
 
     for i in range(Y.shape[1]):
         if Y[0, i] == 1:
@@ -491,7 +382,7 @@ def clases_reales(Y):
     return clases
 
 def matriz_confusion(clases_reales, clases_pred):
-    M = np.zeros((2,2), dtype=int)
+    M = np.zeros((2,2), dtype=float)
     for i in range(clases_reales.shape[0]):
         M[clases_reales[i], clases_pred[i]] += 1
     return M
