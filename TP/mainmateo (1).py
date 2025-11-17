@@ -48,7 +48,6 @@ def cargarDataSet(path):
 
 Xt, Yt, Xv, Yv = cargarDataSet(path)
 
-
 # --------------------------------------
 # ITEM 2 - Ecuaciones Normales
 # --------------------------------------
@@ -74,7 +73,7 @@ def pinvEcuacionesNormales(X, Y):
     # Resuelve A @ U = B donde A = X.T @ X (p, p)
     # La solución final es W = Y @ U
     if n > p :
-        Xt = X.T 
+        Xt = alc.traspuesta(X)
 
         A = alc.multiplicacionMatricial(Xt, X)
         # B es el lado derecho del sistema 
@@ -94,7 +93,7 @@ def pinvEcuacionesNormales(X, Y):
 
         # Resolver L.T @ U = Z para U (Sustitución hacia atrás)
         U = np.zeros_like(Z)
-        L_transpuesta = L.T
+        L_transpuesta = alc.traspuesta(L)
         # Iteramos sobre cada columna de Z que tiene 'n' columnas
         for i in range(Z.shape[1]): 
             U[:, i] = alc.res_tri(L_transpuesta, Z[:, i], inferior=False)
@@ -110,7 +109,7 @@ def pinvEcuacionesNormales(X, Y):
     # Y luego W = Y @ V
     elif n < p:
 
-        Xt = X.T # (p, n)
+        Xt = alc.traspuesta(X) # (p, n)
 
         # A es la matriz pequeña y definida positiva (n, n)
         A = alc.multiplicacionMatricial(X, Xt) 
@@ -121,7 +120,7 @@ def pinvEcuacionesNormales(X, Y):
         L = alc.calculaCholesky(A) 
             
         # El algoritmo resuelve (L @ L.T) @ V.T = X
-        Bt = B.T 
+        Bt = alc.traspuesta(B)
         
         # Resolver L @ L.T @ V.T = X en dos pasos:
         
@@ -136,7 +135,7 @@ def pinvEcuacionesNormales(X, Y):
             Vt[:, i] = alc.res_tri(L.T, Z[:, i], inferior=False)
         
         # Obtener V (la pseudoinversa de X)
-        V = Vt.T 
+        V = alc.traspuesta(Vt)
         
         # Calcular W = Y @ V
         # W (m, n) = Y (m, p) @ V (p, n)
@@ -158,78 +157,6 @@ def pinvEcuacionesNormales(X, Y):
 # ITEM 3 - Descomposición en Valores Singulares
 # --------------------------------------
 
-def svd(A, tol=1e-15, K=1000):
-    """
-    Calcula la Descomposición en Valores Singulares (SVD) de una matriz A.
-    
-    Implementa el cálculo A = U @ S @ V.T (versión reducida)
-    utilizando el método de los autovalores.
-    
-    Parámetros:
-    ----------
-    A : np.ndarray
-        La matriz de datos (n, p) a descomponer.
-    
-    tol : float, opcional
-        Tolerancia para la convergencia en la diagonalización (diagRH).
-        
-    K : int, opcional
-        Número máximo de iteraciones para la diagonalización (diagRH).
-
-    Retorna:
-    -------
-    tuple
-        Una tupla (U, S, V) donde:
-        - U (np.ndarray): Matriz (n, p) de vectores singulares izquierdos.
-        - S (np.ndarray): Vector (p,) de valores singulares.
-        - V (np.ndarray): Matriz (p, p) de vectores singulares derechos.
-    """
-    n, p = A.shape
-    
-    # Calcular A.T @ A 
-    At = A.T
-    AtA = alc.multiplicacionMatricial(At, A) 
-    
-    # Diagonalizar A.T @ A para obtener V y Autovalores
-    # Usamos diagRH para resolver AtA = V @ D @ V.T
-
-    # V (p, p) contiene los autovectores (vectores singulares derechos)
-    # D (p, p) es una matriz diagonal de autovalores
-    V, D , _ = alc.diagRH(AtA, tol, K) 
-    
-    # Obtener Valores Singulares (S) y ordenar
-    autovalores = np.diag(D)
-    
-    # Ordenar autovalores y autovectores de mayor a menor
-    idx_ordenados = np.argsort(autovalores)[::-1]
-    autovalores = autovalores[idx_ordenados]
-    V = V[:, idx_ordenados] # Reordenar las columnas de V
-    
-    # Los valores singulares son la raíz cuadrada de los autovalores
-    S_vector = np.sqrt(np.abs(autovalores)) 
-    
-    # Calcular U usando la relación A = U @ S @ V.T 
-
-    # Crear un vector de ceros para S_inv
-    S_inv = np.zeros_like(S_vector)
-    
-    # Definir un umbral para considerar un valor como "no cero"
-    umbral = 1e-15 # Puedes usar 'tol'
-    
-    # Encontrar los índices donde S_vector es mayor que el umbral
-    idx_no_cero = S_vector > umbral
-    
-    # Solo en esos índices, calcular la inversa
-    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
-    
-    # Convertir el vector S_inv a una matriz diagonal
-    S_inv_diag = np.diag(S_inv)
-    
-    # U = (A @ V) @ S_inv_diag
-    AV = alc.multiplicacionMatricial(A, V) 
-    U = alc.multiplicacionMatricial(AV, S_inv_diag) 
-
-    return U, S_vector, V
 
 def pinvSVD(U, S_vector, V, Yt):
     """
@@ -278,7 +205,7 @@ def pinvSVD(U, S_vector, V, Yt):
     # Calcular W = Yt @ V @ S_plus @ U.T 
     
     # Tmp1 = S_plus @ U.T
-    Ut = U.T 
+    Ut = alc.traspuesta(U) 
     Tmp1 = alc.multiplicacionMatricial(S_plus, Ut) 
     
     # Tmp2 = V @ Tmp1 
@@ -310,7 +237,7 @@ def pinvHouseHolder(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
 
 def pinvGramSchmidt(Q, R, Y):
@@ -320,9 +247,8 @@ def pinvGramSchmidt(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
-
 
 # --------------------------------------------
 # ITEM 5 - Pseudo-Inversa de Moore-Penrose 
@@ -457,7 +383,7 @@ def calcular_metricas(M):
 
 # AHORA ARMO LA TABLA COMPARATIVA
 
-tabla = pd.DataFrame({
+tabla = pd.DataFrame(alc.traspuesta(({
     metodo: {
         "Accuracy": met["Accuracy"],
         "Precisión Gato": met["Precisión Gato"],
@@ -468,7 +394,7 @@ tabla = pd.DataFrame({
         "F1 Perro": met["F1 Perro"]
     }
     for metodo, met in resultados.items()
-}).T
+})))
 
 tabla
 

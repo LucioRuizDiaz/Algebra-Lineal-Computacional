@@ -109,7 +109,8 @@ def vector_canonico(l, i):
 
 def construir_H_sombrero(m, k, H):
     H_sombrero = np.eye(m, dtype=H.dtype) #Identidad de filasxfilas
-    H_sombrero[k: , k:] = H
+    index = k
+    H_sombrero[index: , index:] = H
     return H_sombrero
 
 def simetrica(A, n, tol):
@@ -240,7 +241,8 @@ def calculaLU(A):
     m, n = A.shape
     Ac = A.copy()
     matriz = np.array(Ac)
-    L = np.eye(m,n)    
+    identidad = np.eye(m,n)    
+    L = identidad
     if not esCuadrada(A):
         return None, None, 0
     
@@ -398,10 +400,6 @@ def QR_con_GS(A,tol,retorna_nops=False):
     Q = np.zeros((filas, columnas))
     R = np.zeros((columnas, columnas))
     r = 0 
-
-    # --- BARRA DE PROGRESO ---
-    print(f"Iniciando QR (Gram-Schmidt) para matriz {filas}x{columnas}...")
-    # -------------------------
     for j in range(columnas):
 
         # --- BARRA DE PROGRESO ---
@@ -500,8 +498,109 @@ def diagRH(A, tol=1e-15, K=1000):
             return ident, D
 
     return ident, diagonalHastaN(matriz, n)   
+
+# ------------------------
+# LABO 07
+# ------------------------
+
+
+
+
+# ------------------------
+# LABO 08
+# ------------------------
+
+def svd(A, tol=1e-15, K=1000):
+
+    n, p = A.shape
     
+    At = traspuesta(A)
+    AtA = multiplicacionMatricial(At, A) 
+
+    # V (p, p) contiene los autovectores (vectores singulares derechos)
+    # D (p, p) es una matriz diagonal de autovalores
+    V, D , _ = diagRH(AtA, tol, K) 
+    
+    # Obtener Valores Singulares y ordenar
+    autovalores = np.diag(D)
+    
+    # Ordenar autovalores y autovectores de mayor a menor
+    idx_ordenados = np.argsort(autovalores)[::-1]
+    autovalores = autovalores[idx_ordenados]
+    V = V[:, idx_ordenados]
+    
+    # Los valores singulares son la raíz cuadrada de los autovalores
+    S_vector = np.sqrt(np.abs(autovalores)) 
+    
+    # Calcular U: A = U @ S @ V.T 
+
+    S_inv = np.zeros_like(S_vector)
+
+    umbral = 1e-15 # Puedes usar 'tol'
+    
+    idx_no_cero = S_vector > umbral
+    
+    # Solo en esos índices, calcular la inversa
+    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
+    
+    # Convertir el vector S_inv a una matriz diagonal
+    S_inv_diag = np.diag(S_inv)
+    
+    # U = (A @ V) @ S_inv_diag
+    AV = multiplicacionMatricial(A, V) 
+    U = multiplicacionMatricial(AV, S_inv_diag) 
+
+    return U, S_vector, V
+
+# ------------------------
+# LABO 07
+# ------------------------
 
 
 
 
+# ------------------------
+# LABO 08
+# ------------------------
+
+def svd(A, tol=1e-15, K=1000):
+
+    n, p = A.shape
+    
+    At = traspuesta(A)
+    AtA = multiplicacionMatricial(At, A) 
+
+    # V (p, p) contiene los autovectores (vectores singulares derechos)
+    # D (p, p) es una matriz diagonal de autovalores
+    V, D , _ = diagRH(AtA, tol, K) 
+    
+    # Obtener Valores Singulares y ordenar
+    autovalores = np.diag(D)
+    
+    # Ordenar autovalores y autovectores de mayor a menor
+    idx_ordenados = np.argsort(autovalores)[::-1]
+    autovalores = autovalores[idx_ordenados]
+    V = V[:, idx_ordenados]
+    
+    # Los valores singulares son la raíz cuadrada de los autovalores
+    S_vector = np.sqrt(np.abs(autovalores)) 
+    
+    # Calcular U: A = U @ S @ V.T 
+
+    S_inv = np.zeros_like(S_vector)
+
+    umbral = 1e-15 # Puedes usar 'tol'
+    
+    idx_no_cero = S_vector > umbral
+    
+    # Solo en esos índices, calcular la inversa
+    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
+    
+    # Convertir el vector S_inv a una matriz diagonal
+    S_inv_diag = np.diag(S_inv)
+    
+    # U = (A @ V) @ S_inv_diag
+    AV = multiplicacionMatricial(A, V) 
+    U = multiplicacionMatricial(AV, S_inv_diag) 
+
+    return U, S_vector, V
