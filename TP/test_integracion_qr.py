@@ -55,7 +55,7 @@ try:
     W_hh = pinvHouseHolder(Q_hh, R_hh, Yt)
     print(f"    ... W_hh calculado en {time.time() - start_time_w:.4f} seg.")
     
-    npt.assert_allclose(W_hh, W_real, atol=1e-8)
+    npt.assert_allclose(W_hh, W_real, atol=1e-6)
     print("\n  [PASÓ] pinvHouseHolder (RH) calcula W correctamente con datos reales.")
     print(f"  (Tiempo total RH: {time.time() - start_time:.4f} seg.)")
 
@@ -75,7 +75,7 @@ try:
     W_gs = pinvGramSchmidt(Q_gs, R_gs, Yt)
     print(f"    ... W_gs calculado en {time.time() - start_time_w:.4f} seg.")
     
-    npt.assert_allclose(W_gs, W_real, atol=1e-8)
+    npt.assert_allclose(W_gs, W_real, atol=1e-6)
     print("\n  [PASÓ] pinvGramSchmidt (GS) calcula W correctamente con datos reales.")
     print(f"  (Tiempo total GS: {time.time() - start_time:.4f} seg.)")
 

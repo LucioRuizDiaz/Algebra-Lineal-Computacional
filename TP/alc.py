@@ -109,8 +109,7 @@ def vector_canonico(l, i):
 
 def construir_H_sombrero(m, k, H):
     H_sombrero = np.eye(m, dtype=H.dtype) #Identidad de filasxfilas
-    index = k
-    H_sombrero[index: , index:] = H
+    H_sombrero[k: , k:] = H
     return H_sombrero
 
 def simetrica(A, n, tol):
@@ -381,7 +380,16 @@ def QR_con_GS(A,tol,retorna_nops=False):
     Q = np.zeros((filas, columnas))
     R = np.zeros((columnas, columnas))
     r = 0 
+
+    # --- BARRA DE PROGRESO ---
+    print(f"Iniciando QR (Gram-Schmidt) para matriz {filas}x{columnas}...")
+    # -------------------------
     for j in range(columnas):
+
+        # --- BARRA DE PROGRESO ---
+        # Imprime el progreso y vuelve al inicio de la línea con '\r'
+        print(f"  Progreso GS: {j+1}/{columnas}", end="\r")
+        # -------------------------
         qj = A[:, j].copy()
         for k in range(r):
             R[k, j] = producto_punto(Q[:, k], qj)

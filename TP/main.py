@@ -1,6 +1,7 @@
 import numpy as np
 import alc as alc
 import os
+import time
 path = os.path.join("template-alumnos", "dataset", "cats_and_dogs")
 
 # --------------------------------------
@@ -68,7 +69,7 @@ def pinvHouseHolder(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
 
 def pinvGramSchmidt(Q, R, Y):
@@ -78,7 +79,7 @@ def pinvGramSchmidt(Q, R, Y):
     for c in range(columnas_q):
         Vt[:, c] = alc.res_tri(R, Q[:, c], inferior=False)
     V = alc.traspuesta(Vt) 
-    W = alc.multiplicacion_matricial(Y, V)
+    W = alc.multiplicacionMatricial(Y, V)
     return W
 
 
@@ -115,69 +116,140 @@ def condicion4(X, pX, tol):
 
 
 # -----------------------------------------------
-# ITEM 7 - TESTS (AGREGADO)   borrar despues     
+# ITEM 6 - Evaluacion y Benchmarking     
 # -----------------------------------------------
-import numpy.testing as npt
-
-
-def test_algoritmo_qr():
-    print("\n--- Corriendo tests para Algoritmo 3 (QR) ---")
+def evaluacionQR_HH(Xt, Yt, Xv, Yv):
+    Q, R = xTraspuestaQR(Xt, "RH")
+    W = pinvHouseHolder(Q, R, Yt)
+    Ypred = alc.multiplicacionMatricial(W, Xv)
+    filas, columnas = Ypred.shape
+    print(filas, columnas)
+    YpredClases = np.zeros((filas, columnas)) 
     
-    # 1. Definimos un problema de juguete
-    # X es (n x p) con n < p, como en el TP (n=2, p=3)
-    X_test = np.array([
-        [1.0, 0.0, 1.0],
-        [0.0, 1.0, 1.0]
-    ], dtype=float)
-
-    # Y es (m x p) (m=1, p=3)
-    Y_test = np.array([
-        [5.0, 3.0, 4.0]
-    ], dtype=float)
-
-    # 2. Calculamos la solución real usando numpy
-    # W = Y @ X_pinv
-    X_pinv_real = np.linalg.pinv(X_test)
-    W_real = Y_test @ X_pinv_real
-
-    print(f"  W (real) esperada:\n {W_real}")
-
-    # 3. Testeamos pinvHouseHolder
-    try:
-        Q_hh, R_hh = xTraspuestaQR(X_test, "RH")
-        W_hh = pinvHouseHolder(Q_hh, R_hh, Y_test)
+    for c in range(columnas):
+        indice_max = 0
+        valor_max = Ypred[0, c] 
         
-        # Comparamos tu W con la W real
-        npt.assert_allclose(W_hh, W_real, atol=1e-8)
-        print("  [PASÓ] pinvHouseHolder (RH) calcula W correctamente.")
-    except Exception as e:
-        print(f"  [FALLÓ] pinvHouseHolder (RH): {e}")
-
-    # 4. Testeamos pinvGramSchmidt (después de arreglar alc.py)
-    try:
-        Q_gs, R_gs = xTraspuestaQR(X_test, "GS")
+        for f in range(1, filas): 
+            if Ypred[f, c] > valor_max:
+                valor_max = Ypred[f, c]
+                indice_max = f
         
-        if Q_gs is None:
-            print("  [FALLÓ] pinvGramSchmidt (GS): 'xTraspuestaQR' devolvió None.")
-            print("          (Revisa el 'if(esCuadrada(A))' en 'alc.py:QR_con_GS')")
-            return
+        if indice_max == 0:
+            YpredClases[:, c] = [1.0, 0.0] # Gato
+        else:
+            YpredClases[:, c] = [0.0, 1.0] # Perro
+            
+    matrizConfusion = np.zeros((2, 2))
+    #la matriz se vera de la forma:
+    #[gatos predecidos correctamente,      gatos predecidos como perros]
+    #[perros predecidos como gatos,     perros predecidos correctamente]
+    for c in range(columnas):
+        if YpredClases[0, c] == 1.0:
+            pred = 0                    #en la columna 0 estan los predecidos como gatos
+        else:
+            pred = 1                    #en la columna 1 estan los predecidos como perros
 
-        W_gs = pinvGramSchmidt(Q_gs, R_gs, Y_test)
-        
-        # Comparamos tu W con la W real
-        npt.assert_allclose(W_gs, W_real, atol=1e-8)
-        print("  [PASÓ] pinvGramSchmidt (GS) calcula W correctamente.")
-    except Exception as e:
-        print(f"  [FALLÓ] pinvGramSchmidt (GS): {e}")
+        if Yv[0, c] == 1.0:
+            real = 0                    #en la fila 0 estan los gatos reales
+        else:   
+            real = 1                    #en la fila 1 estan los perros reales
 
-
-# --- Esto hace que el test se corra solo cuando ejecutas 'python main.py' ---
-if __name__ == "__main__":
+        matrizConfusion[real, pred] += 1
     
-    # (Opcional) puedes comentar esto si no quieres cargar datos siempre
-    # print("Cargando dataset real (Xt, Yt)...")
-    # Xt, Yt, Xv, Yv = cargarDataSet(path)
-    # print(f"  Xt shape: {Xt.shape}, Yt shape: {Yt.shape}")
+    print("--- Matriz Confusion QR con HH---")
+    print(matrizConfusion)
+
+
+def evaluacionQR_GS(Xt, Yt, Xv, Yv):
+    Q, R = xTraspuestaQR(Xt, "GS")
+    W = pinvGramSchmidt(Q, R, Yt)
+    Ypred = alc.multiplicacionMatricial(W, Xv)
+    filas, columnas = Ypred.shape
+    print(filas, columnas)
+    YpredClases = np.zeros((filas, columnas)) 
+
+    print(f"Iniciando Ypred(Gram-Schmidt) para matriz {filas}x{columnas}...")
+    for c in range(columnas):
+        # --- BARRA DE PROGRESO ---
+        # Imprime el progreso y vuelve al inicio de la línea con '\r'
+        print(f"  Progreso Ypred: {c+1}/{columnas}", end="\r")
+
+        indice_max = 0
+        valor_max = Ypred[0, c] 
+        
+        for f in range(1, filas): 
+            if Ypred[f, c] > valor_max:
+                valor_max = Ypred[f, c]
+                indice_max = f
+        
+        if indice_max == 0:
+            YpredClases[:, c] = [1.0, 0.0] # Gato
+        else:
+            YpredClases[:, c] = [0.0, 1.0] # Perro
+
+
+    print("--- Y PRED ---")
+    print(Ypred)
+    matrizConfusion = np.zeros((2, 2))
+    #la matriz se vera de la forma:
+    #[gatos predecidos correctamente,      gatos predecidos como perros]
+    #[perros predecidos como gatos,     perros predecidos correctamente]
+
+    print(f"Iniciando Matriz Confusion para matriz {filas}x{columnas}...")
+    for c in range(columnas):
+        print(f"  Progreso Confusion: {c+1}/{columnas}", end="\r")
+        if YpredClases[0, c] == 1.0:
+            pred = 0                    #en la columna 0 estan los predecidos como gatos
+        else:
+            pred = 1                    #en la columna 1 estan los predecidos como perros
+
+        if Yv[0, c] == 1.0:
+            real = 0                    #en la fila 0 estan los gatos reales
+        else:   
+            real = 1                    #en la fila 1 estan los perros reales
+
+        matrizConfusion[real, pred] += 1
     
-    # Corremos los tests
-    test_algoritmo_qr()
+    print("--- Matriz Confusion QR con GS---")
+    print(matrizConfusion)
+
+
+print("--- Evaluacion con matriz completa de GS ---")
+try:
+    start_time = time.time()
+    evaluacionQR_GS(Xt, Yt, Xv, Yv)
+    print(f"    Evaluacion con matriz completa de GS terminado en: {time.time() - start_time:.4f} seg.")
+    
+except Exception as e:
+    print(f"\n  [FALLÓ] pinvGramSchmidt (GS): {e}")
+
+
+
+print("--- Iniciando test de evaluacion con matrices RECORTADAS (MIXTO) ---")
+
+# 1. Definimos los tamaños de las rodajas
+n_features = 200  # Usar 100 features (en lugar de 1536)
+n_train = 400     # Usar 200 muestras de train (en lugar de 2000)
+n_val_gatos = 50  # Usar 25 gatos de validación
+n_val_perros = 50 # Usar 25 perros de validación
+
+# 2. Creamos las matrices recortadas de ENTRENAMIENTO
+Xt_slice = Xt[:n_features, :n_train]
+Yt_slice = Yt[:, :n_train]
+
+# 3. Creamos las matrices recortadas de VALIDACIÓN (Mixto)
+#    (Yv tiene gatos de 0 a 499, y perros de 500 a 999)
+Xv_gatos = Xv[:n_features, :n_val_gatos]
+Xv_perros = Xv[:n_features, 500:(500 + n_val_perros)]
+Xv_slice_mixto = np.concatenate((Xv_gatos, Xv_perros), axis=1)
+
+Yv_gatos = Yv[:, :n_val_gatos]
+Yv_perros = Yv[:, 500:(500 + n_val_perros)]
+Yv_slice_mixto = np.concatenate((Yv_gatos, Yv_perros), axis=1)
+
+print(f"Shapes (entrenamiento): {Xt_slice.shape}, {Yt_slice.shape}")
+print(f"Shapes (validación mixta): {Xv_slice_mixto.shape}, {Yv_slice_mixto.shape}")
+
+# 4. Llamamos a la función de evaluación CON LAS RODAJAS MIXTAS
+evaluacionQR_GS(Xt_slice, Yt_slice, Xv_slice_mixto, Yv_slice_mixto)
