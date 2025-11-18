@@ -370,7 +370,7 @@ def calculaLDV(A):
     for i in range(n):
         for j in range(i, n):
             V[i, j] = U[i, j] / D_vector[i]
-            nops =+ 1
+            nops += 1
     return L, D_matriz, V, nops
 
 
@@ -412,7 +412,26 @@ def esSDP(A, atol=1e-8):
         return False
     return True
 
-
+def calculaCholesky(A, atol=1e-10):
+    if not esSDP(A, atol):
+        return None
+    res = calculaLDV(A)
+    if res is None:
+        return None 
+    L, D_matriz, V, nops = res
+    n = A.shape[0]
+    R = np.zeros((n, n))
+    # Al multiplicar una matriz L por una diagonal D^(1/2) a derecha,
+    # el efecto es multiplicar cada COLUMNA j de L por el elemento raiz(Djj).
+    for j in range(n):
+        valorDiagonal = D_matriz[j, j]
+        if valorDiagonal < 0: 
+            return None 
+        raizD = np.sqrt(valorDiagonal)
+        # Como L es triangular inferior solo iteramos desde i=j hasta n
+        for i in range(j, n):
+            R[i, j] = L[i, j] * raizD
+    return R
 
 # ------------------------
 # LABO 05
@@ -425,6 +444,11 @@ def QR_con_GS(A,tol,retorna_nops=False):
     R = np.zeros((columnas, columnas))
     r = 0 
     for j in range(columnas):
+
+        # --- BARRA DE PROGRESO ---
+        # Imprime el progreso y vuelve al inicio de la línea con '\r'
+        print(f"  Progreso GS: {j+1}/{columnas}", end="\r")
+        # -------------------------
         qj = A[:, j].copy()
         for k in range(r):
             R[k, j] = producto_punto(Q[:, k], qj)

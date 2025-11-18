@@ -52,82 +52,10 @@ Xt, Yt, Xv, Yv = cargarDataSet(path)
 # ITEM 2 - Ecuaciones Normales
 # --------------------------------------
 
-def cholesky(matriz_A):
-    """
-    Calcula la descomposición de Cholesky (A = L * L.T) de una matriz 
-    simétrica y definida positiva.
-
-    Parámetros:
-    matriz_A : np.ndarray
-        Una matriz cuadrada, simétrica y definida positiva.
-
-    Retorna:
-    np.ndarray
-        La matriz triangular inferior L tal que L @ L.T = matriz_A.
-    """
-    
-    # Obtener la dimensión de la matriz 
-    n = matriz_A.shape[0]
-    
-    # Crear una matriz de ceros para almacenar L
-    matriz_L = np.zeros((n, n), dtype=float)
-
-    # Iterar sobre las filas 
-    for i in range(n):
-        # Iterar sobre las columnas 
-        for j in range(i + 1):
-            
-            # Inicializar la suma de productos 
-            suma_parcial = 0
-            for k in range(j):
-                suma_parcial += matriz_L[i, k] * matriz_L[j, k]
-
-            # Elementos de la diagonal
-            if i == j:
-                valor_diagonal = matriz_A[i, i] - suma_parcial
-                
-                # Manejar posibles matrices no def-positivas
-                if valor_diagonal < 0:
-                    raise ValueError("La matriz no es definida positiva. No se puede calcular Cholesky.")
-                
-                matriz_L[i, i] = np.sqrt(valor_diagonal)
-
-            # Elementos fuera de la diagonal
-            else:
-                if matriz_L[j, j] == 0:
-                    raise ValueError("División por cero, L[j, j] es cero.")
-                    
-                matriz_L[i, j] = (matriz_A[i, j] - suma_parcial) / matriz_L[j, j]
-                
-    return matriz_L
-
 def pinvEcuacionesNormales(X, Y):
-    """
-    Resuelve el sistema de ecuaciones lineales Y = W @ X para la matriz W,
-    utilizando la pseudoinversa calculada por Ecuaciones Normales.
-    
-    Elige automáticamente el algoritmo basado en las dimensiones de la matriz de datos X (n, p).
-
-    Parámetros:
-    X : np.ndarray
-        Matriz de datos (features), con dimensiones (n, p).
-    
-    Y : np.ndarray
-        Matriz de etiquetas (objetivos), con dimensiones (m, p).
-
-    Retorna:
-
-    W : np.ndarray
-        La matriz de pesos W (m, n) (ej: (2, 1536)) que mejor 
-        resuelve el sistema.
-    """
-    
-    # Verificación de Dimensiones 
-    
     # m = número de clases 
     # p_Y = número de muestras en Y
     m, p_Y = Y.shape
-    
     # n = número de características
     # p_X = número de muestras en X
     n, p_X = X.shape
@@ -152,7 +80,7 @@ def pinvEcuacionesNormales(X, Y):
         B = Xt
 
         # Calcular la descomposición L @ L.T = A
-        L = cholesky(A)
+        L = alc.calculaCholesky(A)
 
         # Resolver L @ L.T @ U = B en dos pasos:
         
@@ -189,7 +117,7 @@ def pinvEcuacionesNormales(X, Y):
         B = Xt 
         
         # Calcular la descomposición L @ L.T = A
-        L = cholesky(A) 
+        L = alc.calculaCholesky(A) 
             
         # El algoritmo resuelve (L @ L.T) @ V.T = X
         Bt = alc.traspuesta(B)
