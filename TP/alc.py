@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 
 # ------------------------
@@ -95,7 +96,6 @@ def producto_punto(A, B):
         producto += A[i] * B[i]
     return producto
 
-    return C
 
 def vector_de_elementos(A, k, m, c):
     vector = A[k:m, c]
@@ -113,10 +113,10 @@ def construir_H_sombrero(m, k, H):
     H_sombrero[index: , index:] = H
     return H_sombrero
 
-def simetrica(A, n, tol):
+def simetrica(A, n, tol=1e-15):
     for i in range(n):
-        for j in range(i + 1, n):
-            if abs(A[i, j] - A[j, i]) > tol:
+        for j in range(n):
+            if abs(A[i,j] - A[j,i]) > tol:
                 return False
     return True
 
@@ -136,7 +136,15 @@ def suma_elem_fuera_diagonal(A, n): #Suma el valor absoluto de los elementos fue
                 suma += abs(A[i, j])
     return suma
 
-
+def indice_max_abs(vector):
+    max_val = 0.0
+    max_idx = 0
+    for i in range(len(vector)):
+        abs_val = abs(vector[i])
+        if abs_val > max_val:
+            max_val = abs_val
+            max_idx = i
+    return max_idx
 
 # ------------------------
 # LABO 01
@@ -230,6 +238,41 @@ def norma(x, p):
             suma += (np.abs(i))**p
         norma = suma ** (1/p)
     return norma
+
+def normaExacta(A, p=[1, "inf"]):
+
+    # validar exactamente los 3 casos permitidos
+    if p not in (1, "inf", [1, "inf"]):
+        return None
+
+    filas, columnas = A.shape
+
+    # norma infinito
+    suma_filas = []
+    for i in range(filas):
+        s = 0
+        for j in range(columnas):
+            s += abs(A[i, j])
+        suma_filas.append(s)
+
+    # norma uno
+    suma_columnas = []
+    for j in range(columnas):
+        s = 0
+        for i in range(filas):
+            s += abs(A[i, j])
+        suma_columnas.append(s)
+
+    norma_inf = max(suma_filas) if filas else 0
+    norma_uno = max(suma_columnas) if columnas else 0
+
+    if p == 1:
+        return float(norma_uno)
+
+    if p == "inf":
+        return float(norma_inf)
+
+    return [float(norma_uno), float(norma_inf)]
 
 
 # ------------------------
@@ -457,23 +500,54 @@ def metpot2k(A, tol=1e-15, K=1000):
 
 
 def diagRH(A, tol=1e-15, K=1000):
-    matriz = np.array(A)
-    n = matriz.shape[0]
-    ident = np.eye(n)
+
+    n = A.shape[0]
+
     if not esCuadrada(A):
          return None, None
     if simetrica(A, n, tol) == False:
          return None, None
-    for i in range(int(K)):
-        Q, R = QR_con_HH(A, tol)    # CAMBIAR POR FUNCION QR DE LUCHO !!!
-        matriz = multiplicacionMatricial(R, Q)
-        ident = multiplicacionMatricial(ident, Q)
-        aux = suma_elem_fuera_diagonal(matriz, n)
-        if aux < tol:
-            D = diagonalHastaN(matriz, n)
-            return ident, D
+    if n == 1:
+        S = np.eye(1)
+        D = np.array([[A[0,0]]])
+        return S, D
+    v1, lam1, _ = metpot2k(A, tol=tol, K=K)
+    e1 = np.zeros(n)
+    e1[0] = 1.0
+    w = e1 - v1
+    nw = norma(w, 2)
 
-    return ident, diagonalHastaN(matriz, n)   
+    if nw < tol:
+        Hv1 = np.eye(n)
+    else:
+        Hv1 = np.eye(n) - 2.0 * np.outer(w, w) / (nw**2)
+
+    temp = multiplicacionMatricial(Hv1, A)
+    B = multiplicacionMatricial(temp, Hv1)
+
+    if n == 2:
+        S = Hv1
+        D = np.zeros((2,2))
+        Dmat = B.copy()
+        D[0,0] = Dmat[0,0]
+        D[1,1] = Dmat[1,1]
+        return S, D
+    
+    A_tilde = B[1:, 1:]
+    S_tilde, D_tilde = diagRH(A_tilde, tol=tol, K=K)
+    if S_tilde is None:
+        return None, None
+    
+    D = np.zeros((n, n))
+    D[0,0] = lam1
+    D[1:,1:] = D_tilde
+    
+    S_tempo = np.zeros((n,n))
+    S_tempo[0,0] = 1
+    S_tempo[1:,1:] = S_tilde
+    S = multiplicacionMatricial(Hv1, S_tempo)
+
+    return S, D
 
 # ------------------------
 # LABO 07
@@ -486,97 +560,101 @@ def diagRH(A, tol=1e-15, K=1000):
 # LABO 08
 # ------------------------
 
-def svd(A, tol=1e-15, K=1000):
+def svd_reducida(A, k="max", tol=1e-15):
 
-    n, p = A.shape
-    
+    m, n = A.shape
+
+    if k == "max":
+        k_limitado = min(m, n)
+    else:
+        k_limitado = min(k, min(m, n))
+
     At = traspuesta(A)
-    AtA = multiplicacionMatricial(At, A) 
+    AtA = multiplicacionMatricial(At, A)
 
-    # V (p, p) contiene los autovectores (vectores singulares derechos)
-    # D (p, p) es una matriz diagonal de autovalores
-    V, D , _ = diagRH(AtA, tol, K) 
-    
-    # Obtener Valores Singulares y ordenar
-    autovalores = np.diag(D)
-    
-    # Ordenar autovalores y autovectores de mayor a menor
+    V_todos, D_diag = diagRH(AtA, tol, K=min(m,n))
+
+    autovalores = np.zeros(min(m,n))
+    for i in range(len(autovalores)):
+        autovalores[i] = D_diag[i][i]
     idx_ordenados = np.argsort(autovalores)[::-1]
+    idx_ordenados = idx_ordenados[:k_limitado]
     autovalores = autovalores[idx_ordenados]
-    V = V[:, idx_ordenados]
-    
-    # Los valores singulares son la raíz cuadrada de los autovalores
-    S_vector = np.sqrt(np.abs(autovalores)) 
-    
-    # Calcular U: A = U @ S @ V.T 
+    V = V_todos[:, idx_ordenados]
 
-    S_inv = np.zeros_like(S_vector)
+    S_vector = np.sqrt(np.abs(autovalores))
 
-    umbral = 1e-15 # Puedes usar 'tol'
-    
-    idx_no_cero = S_vector > umbral
-    
-    # Solo en esos índices, calcular la inversa
-    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
-    
-    # Convertir el vector S_inv a una matriz diagonal
-    S_inv_diag = np.diag(S_inv)
-    
-    # U = (A @ V) @ S_inv_diag
-    AV = multiplicacionMatricial(A, V) 
-    U = multiplicacionMatricial(AV, S_inv_diag) 
+    r = len(S_vector)
+
+    # Pseudo-inversa
+    S_inv_diag = np.zeros((r, r))
+    for i in range(r):
+        if S_vector[i] > tol:
+            S_inv_diag[i, i] = 1.0 / S_vector[i]
+
+    # U = A V S^-1
+    AV = multiplicacionMatricial(A, V)
+    U = multiplicacionMatricial(AV, S_inv_diag)
+
+    # ORTONORMALIZACIÓN
+    for i in range(U.shape[1]):
+        for j in range(i):
+            coef = sum(U[t, j] * U[t, i] for t in range(m))
+            for t in range(m):
+                U[t, i] -= coef * U[t, j]
+
+    for j in range(U.shape[1]):
+        nrm = norma(U[:, j], 2)
+        if nrm > tol:
+            U[:, j] /= nrm
 
     return U, S_vector, V
 
-# ------------------------
-# LABO 07
-# ------------------------
+
+#%%
+
+# Matrices al azar
+def genera_matriz_para_test(m,n=2,tam_nucleo=0):
+    if tam_nucleo == 0:
+        A = np.random.random((m,n))
+    else:
+        A = np.random.random((m,tam_nucleo))
+        A = np.hstack([A,A])
+    return(A)
+
+def test_svd_reducida_mn(A,tol=1e-15):
+    m,n = A.shape
+    hU,hS,hV = svd_reducida(A,1000,tol=tol)
+    nU,nS,nVT = np.linalg.svd(A)
+    r = len(hS)+1
+    assert np.all(np.abs(np.abs(np.diag(hU.T @ nU))-1)<10**r*tol), 'Revisar calculo de hat U en ' + str((m,n))
+    assert np.all(np.abs(np.abs(np.diag(nVT @ hV))-1)<10**r*tol), 'Revisar calculo de hat V en ' + str((m,n))
+    assert len(hS) == len(nS[np.abs(nS)>tol]), 'Hay cantidades distintas de valores singulares en ' + str((m,n))
+    assert np.all(np.abs(hS-nS[np.abs(nS)>tol])<10**r*tol), 'Hay diferencias en los valores singulares en ' + str((m,n))
+
+for m in [2,5,10,20]:
+    for n in [2,5,10,20]:
+        for _ in range(10):
+            A = genera_matriz_para_test(m,n)
+            test_svd_reducida_mn(A)
+
+# Matrices con nucleo
+
+m = 12
+for tam_nucleo in [2,4,6]:
+    for _ in range(10):
+        A = genera_matriz_para_test(m,tam_nucleo=tam_nucleo)
+        test_svd_reducida_mn(A, tol= 1e-15)
+
+# Tamaños de las reducidas
+A = np.random.random((8,6))
+for k in [1,3,5]:
+    hU,hS,hV = svd_reducida(A, k=k, tol=1e-15)
+    assert hU.shape[0] == A.shape[0], 'Dimensiones de hU incorrectas (caso a)'
+    assert hV.shape[0] == A.shape[1], 'Dimensiones de hV incorrectas(caso a)'
+    assert hU.shape[1] == k, 'Dimensiones de hU incorrectas (caso a)'
+    assert hV.shape[1] == k, 'Dimensiones de hV incorrectas(caso a)'
+    assert len(hS) == k, 'Tamaño de hS incorrecto'
 
 
-
-
-# ------------------------
-# LABO 08
-# ------------------------
-
-def svd(A, tol=1e-15, K=1000):
-
-    n, p = A.shape
-    
-    At = traspuesta(A)
-    AtA = multiplicacionMatricial(At, A) 
-
-    # V (p, p) contiene los autovectores (vectores singulares derechos)
-    # D (p, p) es una matriz diagonal de autovalores
-    V, D , _ = diagRH(AtA, tol, K) 
-    
-    # Obtener Valores Singulares y ordenar
-    autovalores = np.diag(D)
-    
-    # Ordenar autovalores y autovectores de mayor a menor
-    idx_ordenados = np.argsort(autovalores)[::-1]
-    autovalores = autovalores[idx_ordenados]
-    V = V[:, idx_ordenados]
-    
-    # Los valores singulares son la raíz cuadrada de los autovalores
-    S_vector = np.sqrt(np.abs(autovalores)) 
-    
-    # Calcular U: A = U @ S @ V.T 
-
-    S_inv = np.zeros_like(S_vector)
-
-    umbral = 1e-15 # Puedes usar 'tol'
-    
-    idx_no_cero = S_vector > umbral
-    
-    # Solo en esos índices, calcular la inversa
-    S_inv[idx_no_cero] = 1.0 / S_vector[idx_no_cero]
-    
-    # Convertir el vector S_inv a una matriz diagonal
-    S_inv_diag = np.diag(S_inv)
-    
-    # U = (A @ V) @ S_inv_diag
-    AV = multiplicacionMatricial(A, V) 
-    U = multiplicacionMatricial(AV, S_inv_diag) 
-
-    return U, S_vector, V
+# %%
